@@ -1,0 +1,84 @@
+﻿@page "/paginadoPersonal"
+
+@if (TotalPaginas > 1)
+{
+    <nav aria-label="Page navigation example">
+
+        <ul class="pagination text-danger">
+
+            <li class="page-item @ClaseDeshabilitada(1)">
+                <button class="page-link" @onclick="() => ConfiguracionPagina(1)" disabled="@PrimeraPagina">Primera</button>
+            </li>
+
+            <li class="page-item @ClaseDeshabilitada(PaginaActual - 1)">
+                <button class="page-link" @onclick="() => ConfiguracionPagina(PaginaActual - 1)" disabled="@PrimeraPagina">Anterior</button>
+            </li>
+
+            @for (var i = PaginaInicial; i <= PaginaFinal; i++)
+            {
+                <li class="page-item @(i == PaginaActual ? "active" : "")">
+                    <button class="page-link" @onclick="() => ConfiguracionPagina(i)">@i</button>
+                </li>
+            }
+
+            <li class="page-item @ClaseDeshabilitada(PaginaActual + 1)">
+                <button class="page-link" @onclick="() => ConfiguracionPagina(PaginaActual + 1)" disabled="@UltimaPagina">Siguiente</button>
+            </li>
+
+            <li class="page-item @ClaseDeshabilitada(TotalPaginas)">
+                <button class="page-link" @onclick="() => ConfiguracionPagina(TotalPaginas)" disabled="@UltimaPagina">Última</button>
+            </li>
+
+        </ul>
+
+    </nav>
+}
+
+@code
+{
+
+    [Parameter]
+    public int PaginaActual { get; set; }
+
+    [Parameter]
+    public int TotalPaginas { get; set; }
+
+    [Parameter]
+    public string? ValorBusqueda { get; set; }
+
+    [Parameter]
+    public int IdRango { get; set; }
+
+    [Parameter]
+    public EventCallback<int> OnPageChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnBusquedaChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<int> OnRangoChanged { get; set; }
+
+    private bool PrimeraPagina => PaginaActual == 1;
+
+    private bool UltimaPagina => PaginaActual == TotalPaginas;  
+
+    private int PaginaInicial => Math.Max(1, PaginaActual - 2);
+
+    private int PaginaFinal => Math.Min(TotalPaginas, PaginaActual + 2);
+
+    private string ClaseDeshabilitada(int pagina) => (pagina == PaginaActual || PrimeraPagina && pagina == 1 || UltimaPagina && pagina == TotalPaginas) ? "disabled" : "";
+
+    private async Task ConfiguracionPagina(int pagina)
+    {
+        if (pagina < 1 || pagina > TotalPaginas || pagina == PaginaActual)
+        {
+            return;
+        }
+
+        PaginaActual = pagina;
+        await OnPageChanged.InvokeAsync(pagina);
+        await OnBusquedaChanged.InvokeAsync(ValorBusqueda);
+        await OnRangoChanged.InvokeAsync(IdRango);
+    }
+
+}

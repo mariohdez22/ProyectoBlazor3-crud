@@ -1,0 +1,103 @@
+﻿@page "/modalPersonal"
+@using BlazorCrud.Shared;
+@using BlazorCrud.Client.Services.Interfaces;
+@using BlazorCrud.Client.Services.Servicios;
+@inject IPersonalService personalService;
+@inject IRangoPersonalService rangoService;
+@inject NavigationManager navegacion;
+
+<h3>@titulo</h3>
+
+<EditForm Model="personal" OnValidSubmit="OnValidSubmit">
+
+    <DataAnnotationsValidator></DataAnnotationsValidator>
+
+        <div class="input-group mb-3">
+            <span class="input-group-text" id="basic-addon1">Nombres</span>
+            <InputText type="text" class="form-control" @bind-Value="personal.Nombres" placeholder="Agregar Nombres" aria-label="Username" aria-describedby="basic-addon1"></InputText>
+        </div>
+
+        <div class="input-group mb-3">
+            <span class="input-group-text" id="basic-addon1">Celular</span>
+            <InputText type="text" class="form-control" @bind-Value="personal.Celular" placeholder="Agregar Celular" aria-label="Username" aria-describedby="basic-addon1"></InputText>
+        </div>
+
+        <div class="input-group mb-3">
+            <span class="input-group-text" id="basic-addon1">Correo</span>
+            <InputText type="Email" class="form-control" @bind-Value="personal.Correo" placeholder="Agregar Correo" aria-label="Username" aria-describedby="basic-addon1"></InputText>
+        </div>
+
+        <div class="input-group mb-3">
+            <span class="input-group-text" id="basic-addon1">Rango Personal</span>
+            <InputSelect class="form-select" @bind-Value="personal.IdRangoPersonal">
+                <option value="0">Seleccionar Departamento...</option>
+                @foreach (var item in listaRango)
+                {
+                    <option value="@item.IdRangoPersonal">@item.Rangos</option>
+                }
+            </InputSelect>
+        </div>
+
+        <br />
+
+        <button type="submit" class="btn btn-success">@btnTexto</button>
+
+</EditForm>
+
+@code 
+{
+    [Parameter]
+    public int idPersonalEditar { get; set; } = 0;
+
+    string titulo = string.Empty;
+    string btnTexto = string.Empty;
+
+    //----------------------------------------------------------------------------------
+
+    PersonalDTO personal = new PersonalDTO();
+
+    List<RangoPersonalDTO> listaRango = new List<RangoPersonalDTO>();
+
+    [CascadingParameter] BlazoredModalInstance BlazoredModal { get; set; } = default!;
+
+    //----------------------------------------------------------------------------------
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (idPersonalEditar != 0)
+        {
+            personal = await personalService.BuscarTrabajador(idPersonalEditar);
+            btnTexto = "Actualizar";
+            titulo = "Editar Personal";
+        }
+        else
+        {
+            btnTexto = "Agregar";
+            titulo = "Agregar Personal";
+        }
+
+        listaRango = await rangoService.MostrarRangoPersonal();
+
+    }
+
+    //----------------------------------------------------------------------------------
+
+    private async Task OnValidSubmit()
+    {
+        string ValorDevuelto = "";
+
+        if (idPersonalEditar == 0)
+        {
+            ValorDevuelto = await personalService.CrearTrabajador(personal);
+        }
+        else
+        {
+            ValorDevuelto = await personalService.EditarTrabajador(personal, idPersonalEditar);
+        }
+
+        if (ValorDevuelto == "Ejecucion Correcta")
+        {
+            await BlazoredModal.CloseAsync(ModalResult.Ok(ValorDevuelto));
+        }
+    }
+}

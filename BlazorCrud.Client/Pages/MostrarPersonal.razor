@@ -1,0 +1,253 @@
+﻿@page "/mostrarPersonal"
+@using BlazorCrud.Shared;
+@using CurrieTechnologies.Razor.SweetAlert2;
+@using BlazorCrud.Client.Services.Interfaces;
+@using BlazorCrud.Client.Services.Servicios;
+@inject SweetAlertService Sweet;
+@inject IPersonalService personalService;
+
+<h3>MostrarPersonal</h3>
+
+<br />
+
+<section class="contenedorBotones">
+
+    <button type="button" class="btn btn-dark btn-sm mb-3" @onclick="@(() => ShowModal(0))">Nuevo Personal</button>
+
+    <div class="dropdown">
+        <button class="btn btn-danger dropdown-toggle btn-sm mb-3" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            Filtro por Cargo
+        </button>
+        <ul class="dropdown-menu">
+            <li><a class="dropdown-item" @onclick="@(() => FiltroCargo(0))">Registros Generales</a></li>
+            <li><a class="dropdown-item" @onclick="@(() => FiltroCargo(1))">Mostrar Administradores</a></li>
+            <li><a class="dropdown-item" @onclick="@(() => FiltroCargo(2))">Mostrar Gerentes</a></li>
+            <li><a class="dropdown-item" @onclick="@(() => FiltroCargo(3))">Mostrar Colaboradores</a></li>
+        </ul>
+    </div>
+
+    <div class="dropdown">
+        <button class="btn btn-warning dropdown-toggle btn-sm mb-3" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            Ordenar Personal
+        </button>
+        <ul class="dropdown-menu">
+            <li><a class="dropdown-item" @onclick="@(() => OrdenarPersonal("Ascendente"))">Ordenar Ascendente</a></li>
+            <li><a class="dropdown-item" @onclick="@(() => OrdenarPersonal("Descendente"))">Ordenar Descendente</a></li>
+        </ul>
+    </div>
+    <div class="mb-3">
+        <input type="text" class="form-control form-control-sm" @bind="valorBusqueda" @oninput="CargarPersonalBuscado" placeholder="Buscar Registro">
+    </div>
+
+</section>
+
+<br />
+
+<table class="table table-striped">
+
+    <thead>
+
+        <tr class="table-danger">
+            <th>ID</th>
+            <th>Nombres</th>
+            <th>Celular</th>
+            <th>Correo</th>
+            <th>Rango Personal</th>
+            <th>Opciones</th>
+        </tr>
+
+    </thead>
+
+    <tbody>
+
+        @if (respuestaPersonal?.Resultado != null)
+        {
+            @foreach (var item in respuestaPersonal.Resultado)
+            {
+                <tr>
+                    <td>@item.IdPersonal</td>
+                    <td>@item.Nombres</td>
+                    <td>@item.Celular</td>
+                    <td>@item.Correo</td>
+                    <td>@item.RangosPersonales!.Rangos</td>
+                    <td>
+                        <button class="btn btn-warning btn-sm" @onclick="@(() => ShowModal(item.IdPersonal))"><i class="oi oi-pencil"></i></button>
+                        <button type="button" class="btn btn-danger btn-sm ms-2" @onclick="(() => Eliminar(item.IdPersonal))"><i class="oi oi-trash"></i></button>
+                    </td>
+                </tr>
+            }
+        }
+        else
+        {
+            <tr>
+                <td>No se Encontraron Resultados</td>
+            </tr>
+        }
+
+    </tbody>
+
+</table>
+
+<br />
+
+<PaginadoPersonal 
+    PaginaActual="@paginaActual" 
+    TotalPaginas="@totalPaginas" 
+    OnPageChanged="HandlePageChanged"
+    ValorBusqueda="@valorBusqueda"
+    IdRango="@rango"
+    OnBusquedaChanged="HandleBusquedaChanged"
+    OnRangoChanged="HandleRangoChanged">
+</PaginadoPersonal>
+
+@code 
+{
+
+    // Objetos de modelos mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm|
+
+    private APIResponse<List<PersonalDTO>>? respuestaPersonal;
+
+    // Variables con valores cambiantes mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm|
+
+    private int rango = 0;
+    private string valorOrden = "Descendente";
+    private string valorBusqueda = "";
+
+    // Variables para Paginacion mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm|
+
+    private int paginaActual = 1;
+    private int tamanoPagina = 5;
+    private int registrosActuales;
+    private int totalPaginas;
+
+    // Modal mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm|
+
+    [CascadingParameter] public IModalService Modal { get; set; } = default!;
+
+    // MetodoInicializador mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm|
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarPagina(paginaActual, 0, "Descendente");
+    }
+
+    // Metodos Generales mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm|
+
+    private async Task OrdenarPersonal(string valor)
+    {
+        await CargarPagina(paginaActual, rango, valor);
+        valorOrden = valor;
+    }
+
+    private async Task FiltroCargo(int valor)
+    {
+        await CargarPagina(paginaActual, valor, valorOrden);
+        rango = valor;
+    }
+
+    private async Task CargarPagina(int numeroPagina, int idRango, string orden)
+    {
+        ParametrosPaginacion parametros = new()
+        {
+            NumeroPagina = numeroPagina,
+            TamañoPagina = tamanoPagina,
+            IdRango = idRango,
+            Orden = orden,
+            Buscar = valorBusqueda
+        };
+
+        respuestaPersonal = await personalService.MostrarTrabajadores(parametros);
+        registrosActuales = respuestaPersonal.TotalRegistros;
+        totalPaginas = (int)Math.Ceiling((double)registrosActuales / tamanoPagina);
+        paginaActual = numeroPagina;
+    }
+
+    private async Task CargarPersonalBuscado(ChangeEventArgs e)
+    {
+        try
+        {
+            valorBusqueda = e.Value.ToString();
+
+            if (valorBusqueda != "")
+            {
+                await CargarPagina(paginaActual, 0, valorOrden);
+            }
+            else
+            {
+                await CargarPagina(paginaActual, rango, valorOrden);
+            }
+        }
+        catch (InvalidOperationException ex)
+        {
+            Console.WriteLine($"Error al realizar la solicitud: {ex.Message}");
+            throw;
+        }
+    }
+    
+    // Handlers mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm|
+
+    private async Task HandlePageChanged(int newPage)
+    {
+        paginaActual = newPage;
+        await CargarPagina(newPage, rango, valorOrden);
+    }
+
+    private async Task HandleBusquedaChanged(string newBusqueda)
+    {
+        valorBusqueda = newBusqueda;
+        await CargarPagina(paginaActual, 0, valorOrden);
+    }
+
+    private async Task HandleRangoChanged(int newRango)
+    {
+        rango = newRango;
+        await CargarPagina(paginaActual, rango, valorOrden);
+    }
+
+    // Modals mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm|
+
+    private async Task ShowModal(int ID)
+    {
+        var options = new ModalOptions()
+        {
+            Position = ModalPosition.Middle
+        };
+
+        var parametros = new ModalParameters().Add(nameof(ModalPersonal.idPersonalEditar), ID);
+
+        var modal = Modal.Show<ModalPersonal>("Gestion Personal", parametros, options);
+        var resultado = await modal.Result;
+
+        if (resultado.Confirmed)
+        {
+            if (resultado.Data.ToString() == "Ejecucion Correcta")
+            {
+                await CargarPagina(paginaActual, 0, "Descendente");
+            }
+        }
+
+    }
+
+    private async Task Eliminar(int id)
+    {
+        var respuesta = await Sweet.FireAsync(new SweetAlertOptions
+        {
+            Title = "Eliminar Trabajador",
+            Text = "Deseas Eliminar al Trabajador?",
+            Icon = SweetAlertIcon.Question,
+            ShowCancelButton = true
+        });
+
+        if (respuesta.IsConfirmed)
+        {
+            var eliminado = await personalService.BorrarTrabajador(id);
+
+            if (eliminado == "Ejecucion Correcta")
+            {
+                await CargarPagina(paginaActual, 0, "Descendente");
+            }
+        }
+    }
+
+}
+

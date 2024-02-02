@@ -1,0 +1,11 @@
+﻿
+.contenedorBotones
+{
+    display: flex;
+    gap: 20px;
+}
+
+.dropdown-item
+{
+    cursor: pointer;
+}

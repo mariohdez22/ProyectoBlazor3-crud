@@ -39,6 +39,13 @@ namespace BlazorCrud.Server.Controllers
 
                 (List<Personal> lista, int totalRegistros) = await _repositorio.ConsultaPersonal(parametros);
 
+                if (lista == null)
+                {
+                    _apiResponse.MensajeError = "No hay registros disponibles";
+                    _apiResponse.EsExitoso = false;
+                    _apiResponse.TotalRegistros = 0;   
+                }
+
                 _apiResponse.Resultado = _mapper.Map<List<PersonalDTO>>(lista);
                 _apiResponse.TotalRegistros = totalRegistros;
                 _apiResponse.CodigoEstado = HttpStatusCode.OK;

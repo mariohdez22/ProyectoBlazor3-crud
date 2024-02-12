@@ -14,7 +14,9 @@
 
         <div class="input-group mb-3">
             <span class="input-group-text" id="basic-addon1">Nombres</span>
-            <InputText type="text" class="form-control" @bind-Value="personal.Nombres" placeholder="Agregar Nombres" aria-label="Username" aria-describedby="basic-addon1"></InputText>
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+            <InputText type="text" class="form-control"  @bind-Value="personal.Nombres" placeholder="Agregar Nombres" aria-label="Username" aria-describedby="basic-addon1"></InputText>
         </div>
 
         <div class="input-group mb-3">
